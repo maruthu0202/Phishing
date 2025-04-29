@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Detection Tool</title>
+    <style>
+        :root {
+            --primary: #3a86ff;
+            --danger: #ff0a54;
+            --warning: #ffa200;
+            --success: #38b000;
+            --neutral: #6c757d;
+            --light: #f8f9fa;
+            --dark: #212529;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background-color: #f0f5ff;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        .tagline {
+            color: var(--neutral);
+            font-size: 1rem;
+        }
+        
+        .input-area {
+            margin-bottom: 20px;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+        }
+        
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #2169e8;
+        }
+        
+        .results {
+            display: none;
+            background-color: var(--light);
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .risk-level {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: white;
+        }
+        
+        .high {
+            background-color: var(--danger);
+        }
+        
+        .medium {
+            background-color: var(--warning);
+        }
+        
+        .low {
+            background-color: var(--success);
+        }
+        
+        .detected-issues {
+            margin-bottom: 20px;
+        }
+        
+        .issue {
+            padding: 10px;
+            border-left: 4px solid;
+            background-color: white;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        
+        .issue.urgent {
+            border-color: var(--danger);
+        }
+        
+        .issue.suspicious {
+            border-color: var(--warning);
+        }
+        
+        .issue-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .issue-description {
+            font-size: 0.9rem;
+            color: var(--neutral);
+        }
+        
+        .highlighted-content {
+            background-color: white;
+            padding: 15px;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            font-family: monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .highlight-urgent {
+            background-color: rgba(255, 10, 84, 0.15);
+            padding: 2px;
+            border-radius: 3px;
+        }
+        
+        .highlight-suspicious {
+            background-color: rgba(255, 162, 0, 0.15);
+            padding: 2px;
+            border-radius: 3px;
+        }
+        
+        .highlight-url {
+            background-color: rgba(58, 134, 255, 0.15);
+            padding: 2px;
+            border-radius: 3px;
+        }
+        
+        .tips {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(58, 134, 255, 0.1);
+            border-radius: 6px;
+        }
+        
+        .tips h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+        
+        .tips ul {
+            margin-bottom: 0;
+            padding-left: 20px;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            color: var(--neutral);
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .result-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .risk-level {
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Phishing Detection Tool</h1>
+            <p class="tagline">Analyze emails and messages for potential phishing attempts</p>
+        </header>
+        
+        <div class="input-area">
+            <textarea id="messageInput" placeholder="Paste the suspicious email or message content here..."></textarea>
+            <div style="margin-top: 10px; text-align: right;">
+                <button id="analyzeBtn">Analyze Message</button>
+            </div>
+        </div>
+        
+        <div id="results" class="results">
+            <div class="result-header">
+                <h2>Analysis Results</h2>
+                <span id="riskLevel" class="risk-level">Medium Risk</span>
+            </div>
+            
+            <div id="detectedIssues" class="detected-issues">
+                <!-- Issues will be added here by JS -->
+            </div>
+            
+            <h3>Highlighted Content</h3>
+            <div id="highlightedContent" class="highlighted-content">
+                <!-- Highlighted content will be added here by JS -->
+            </div>
+            
+            <div class="tips">
+                <h3>Safety Tips</h3>
+                <ul>
+                    <li>Never provide passwords or sensitive information via email</li>
+                    <li>Verify the sender's email address carefully</li>
+                    <li>Hover over links before clicking to see the actual URL</li>
+                    <li>Be cautious of urgent requests or threats</li>
+                    <li>When in doubt, contact the supposed sender through official channels</li>
+                </ul>
+            </div>
+        </div>
+        
+        <footer>
+            <p>This tool analyzes messages locally in your browser. No data is sent to external servers.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const messageInput = document.getElementById('messageInput');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const results = document.getElementById('results');
+            const riskLevel = document.getElementById('riskLevel');
+            const detectedIssues = document.getElementById('detectedIssues');
+            const highlightedContent = document.getElementById('highlightedContent');
+            
+            // Phishing detection patterns
+            const phishingPatterns = {
+                urgentWords: [
+                    { pattern: /urgent|immediately|alert|attention|important|critical/gi, category: 'urgency', severity: 'high' },
+                    { pattern: /act now|expire|limited time|deadline|last chance/gi, category: 'urgency', severity: 'medium' }
+                ],
+                credentials: [
+                    { pattern: /password|login|credential|verify|account.*verify|verify.*account|confirm.*account|account.*confirm/gi, category: 'credentials', severity: 'high' },
+                    { pattern: /sign in|log in|username|authenticate|security|access/gi, category: 'credentials', severity: 'medium' }
+                ],
+                financialBait: [
+                    { pattern: /bank|transfer|payment|deposit|withdraw|transaction|financial|credit card|debit card|billing/gi, category: 'financial', severity: 'high' },
+                    { pattern: /money|fund|cash|dollar|euro|bitcoin|crypto|wallet|invoice/gi, category: 'financial', severity: 'medium' }
+                ],
+                threats: [
+                    { pattern: /suspend|terminate|delete.*account|account.*delete|block|restrict|limit|close.*account|account.*close/gi, category: 'threat', severity: 'high' },
+                    { pattern: /risk|warning|failure|fraud|suspicious|unusual activity/gi, category: 'threat', severity: 'medium' }
+                ],
+                personalInfo: [
+                    { pattern: /ssn|social security|identity|id number|passport|driver('s| )license|tax id/gi, category: 'personal', severity: 'high' },
+                    { pattern: /address|phone number|date of birth|maiden name/gi, category: 'personal', severity: 'medium' }
+                ],
+                urlPatterns: [
+                    { pattern: /(https?:\/\/([^\s\.]+\.)*?([^\s\.]+)\.([^\s\.\/]+)(\/[^\s]*)?)/gi, category: 'url', severity: 'medium' }, // General URL pattern
+                    { pattern: /bit\.ly|tinyurl|goo\.gl|t\.co|is\.gd|cli\.gs|pic\.gd|DwarfURL|ow\.ly/gi, category: 'shortenedUrl', severity: 'high' }, // URL shorteners
+                    { pattern: /\.(com|org|net|edu|gov|co|io)[\w\d-]*\.(com|org|net|edu|gov|co|io)/gi, category: 'suspiciousDomain', severity: 'high' } // Domain spoofing pattern
+                ],
+                emotionalManipulation: [
+                    { pattern: /lucky|winner|congratulation|selected|exclusive offer|free|bonus/gi, category: 'manipulation', severity: 'medium' },
+                    { pattern: /help|support|kindly|please|favor|desperate|urgent matter/gi, category: 'manipulation', severity: 'low' }
+                ],
+                grammar: [
+                    { pattern: /[A-Z]{5,}/g, category: 'grammar', severity: 'low' }, // ALL CAPS text
+                    { pattern: /(?:\.|\?|!){2,}/g, category: 'grammar', severity: 'low' } // Multiple punctuation marks
+                ]
+            };
+            
+            // Issue descriptions for detected patterns
+            const issueDescriptions = {
+                urgency: {
+                    title: "Urgency Tactics",
+                    description: "The message creates a false sense of urgency to pressure you into taking immediate action without thinking."
+                },
+                credentials: {
+                    title: "Credential Phishing",
+                    description: "This message appears to be attempting to collect your login information or passwords."
+                },
+                financial: {
+                    title: "Financial Information Request",
+                    description: "The message is targeting your financial information or accounts."
+                },
+                threat: {
+                    title: "Threat or Fear Tactics",
+                    description: "This message uses threats or fear to manipulate you into taking action."
+                },
+                personal: {
+                    title: "Personal Information Request",
+                    description: "The message is attempting to collect sensitive personal information."
+                },
+                url: {
+                    title: "Contains URLs",
+                    description: "The message contains links that could lead to malicious websites."
+                },
+                shortenedUrl: {
+                    title: "Shortened URLs",
+                    description: "Shortened URLs mask the true destination and are commonly used in phishing attacks."
+                },
+                suspiciousDomain: {
+                    title: "Suspicious Domain",
+                    description: "The URL appears to use a domain that may be attempting to mimic a legitimate website."
+                },
+                manipulation: {
+                    title: "Emotional Manipulation",
+                    description: "The message uses emotional manipulation tactics to influence your behavior."
+                },
+                grammar: {
+                    title: "Suspicious Formatting",
+                    description: "The message contains unusual formatting or grammar often seen in phishing attempts."
+                }
+            };
+            
+            // Main analysis function
+            analyzeBtn.addEventListener('click', function() {
+                const messageText = messageInput.value.trim();
+                
+                if (!messageText) {
+                    alert('Please enter a message to analyze.');
+                    return;
+                }
+                
+                // Reset results display
+                detectedIssues.innerHTML = '';
+                highlightedContent.textContent = messageText;
+                
+                // Analyze message
+                const issues = [];
+                let highlightedHTML = messageText;
+                let totalSeverityScore = 0;
+                let foundIssues = 0;
+                
+                // Check all pattern categories
+                for (const category in phishingPatterns) {
+                    const patterns = phishingPatterns[category];
+                    
+                    patterns.forEach(pattern => {
+                        const matches = [...messageText.matchAll(pattern.pattern)];
+                        
+                        if (matches.length > 0) {
+                            // Add to issues list if not already included
+                            const existingIssue = issues.find(i => i.category === pattern.category);
+                            
+                            if (!existingIssue) {
+                                issues.push({
+                                    category: pattern.category,
+                                    severity: pattern.severity,
+                                    matches: matches.map(m => m[0])
+                                });
+                                
+                                // Increment score based on severity
+                                if (pattern.severity === 'high') totalSeverityScore += 5;
+                                else if (pattern.severity === 'medium') totalSeverityScore += 3;
+                                else totalSeverityScore += 1;
+                                
+                                foundIssues++;
+                            }
+                            
+                            // Special handling for URLs to analyze them further
+                            if (pattern.category === 'url') {
+                                matches.forEach(match => {
+                                    const url = match[0];
+                                    let cssClass = 'highlight-url';
+                                    
+                                    // Additional URL analysis could be added here
+                                    
+                                    // Replace URL in the highlighted content
+                                    highlightedHTML = highlightedHTML.replace(
+                                        url, 
+                                        `<span class="${cssClass}">${url}</span>`
+                                    );
+                                });
+                            } else {
+                                // Highlight other matches
+                                matches.forEach(match => {
+                                    const text = match[0];
+                                    const cssClass = pattern.severity === 'high' ? 'highlight-urgent' : 'highlight-suspicious';
+                                    
+                                    // Use replace with regex to highlight all instances
+                                    const regex = new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+                                    highlightedHTML = highlightedHTML.replace(
+                                        regex, 
+                                        `<span class="${cssClass}">${text}</span>`
+                                    );
+                                });
+                            }
+                        }
+                    });
+                }
+                
+                // Domain mismatch check (basic implementation)
+                const emailPattern = /([a-zA-Z0-9._-]+@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,}))/g;
+                const emailMatches = [...messageText.matchAll(emailPattern)];
+                
+                if (emailMatches.length >= 2) {
+                    // Compare domains of different email addresses
+                    const domains = emailMatches.map(match => match[2]);
+                    const uniqueDomains = [...new Set(domains)];
+                    
+                    if (uniqueDomains.length > 1) {
+                        issues.push({
+                            category: 'domainMismatch',
+                            severity: 'high',
+                            matches: emailMatches.map(m => m[0])
+                        });
+                        
+                        totalSeverityScore += 5;
+                        foundIssues++;
+                        
+                        // Highlight mismatched domains
+                        emailMatches.forEach(match => {
+                            const email = match[0];
+                            highlightedHTML = highlightedHTML.replace(
+                                email,
+                                `<span class="highlight-urgent">${email}</span>`
+                            );
+                        });
+                    }
+                }
+                
+                // Display highlighted content
+                highlightedContent.innerHTML = highlightedHTML;
+                
+                // Determine overall risk level
+                let riskCategory = 'low';
+                if (totalSeverityScore > 15 || (issues.filter(i => i.severity === 'high').length >= 2)) {
+                    riskCategory = 'high';
+                } else if (totalSeverityScore > 5 || issues.filter(i => i.severity === 'high').length >= 1) {
+                    riskCategory = 'medium';
+                }
+                
+                // Update risk level display
+                riskLevel.textContent = riskCategory.charAt(0).toUpperCase() + riskCategory.slice(1) + ' Risk';
+                riskLevel.className = 'risk-level ' + riskCategory;
+                
+                // Add special case for domain mismatch
+                if (issues.find(i => i.category === 'domainMismatch')) {
+                    const issueEl = document.createElement('div');
+                    issueEl.className = 'issue urgent';
+                    issueEl.innerHTML = `
+                        <div class="issue-title">Multiple Different Domains</div>
+                        <div class="issue-description">The message contains different email domains, which is often a sign of sender spoofing or impersonation.</div>
+                    `;
+                    detectedIssues.appendChild(issueEl);
+                }
+                
+                // Create issue elements
+                issues.forEach(issue => {
+                    // Skip domain mismatch as it's handled separately
+                    if (issue.category === 'domainMismatch') return;
+                    
+                    if (issueDescriptions[issue.category]) {
+                        const issueEl = document.createElement('div');
+                        issueEl.className = 'issue ' + (issue.severity === 'high' ? 'urgent' : 'suspicious');
+                        issueEl.innerHTML = `
+                            <div class="issue-title">${issueDescriptions[issue.category].title}</div>
+                            <div class="issue-description">${issueDescriptions[issue.category].description}</div>
+                        `;
+                        detectedIssues.appendChild(issueEl);
+                    }
+                });
+                
+                // If no issues were found
+                if (issues.length === 0) {
+                    const issueEl = document.createElement('div');
+                    issueEl.className = 'issue';
+                    issueEl.innerHTML = `
+                        <div class="issue-title">No obvious phishing indicators detected</div>
+                        <div class="issue-description">However, always remain cautious. Sophisticated phishing attempts may not contain obvious red flags.</div>
+                    `;
+                    detectedIssues.appendChild(issueEl);
+                }
+                
+                // Show results
+                results.style.display = 'block';
+                results.scrollIntoView({ behavior: 'smooth' });
+            });
+            
+            // Add sample text for testing
+            const sampleBtn = document.createElement('button');
+            sampleBtn.textContent = 'Load Sample Phishing Message';
+            sampleBtn.style.marginRight = '10px';
+            sampleBtn.style.backgroundColor = '#6c757d';
+            
+            document.querySelector('.input-area div').prepend(sampleBtn);
+            
+            sampleBtn.addEventListener('click', function() {
+                messageInput.value = `URGENT: Your Account Access Will Terminate in 24 Hours!!!!
+
+Dear Valued Customer,
+
+We have detected unusual activity on your account. Your online banking access will be SUSPENDED within 24 HOURS unless you verify your information IMMEDIATELY!
+
+To prevent account termination, please click the secure link below:
+https://bankofamerica-secure.com.verify-account.info/login
+
+You will need to confirm:
+- Full name
+- Account number
+- Social Security Number
+- Current password
+
+If you fail to complete this verification, your account access will be permanently restricted and pending transfers canceled.
+
+For assistance, reply to support@bank0famerica-help.com
+
+Thank you,
+Bank of America Security Team
+security@bankservice-team.com`;
+            });
+        });
+    </script>
+</body>
+</html>
